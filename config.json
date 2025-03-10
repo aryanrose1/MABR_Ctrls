@@ -1,0 +1,31 @@
+{
+  "logging_period": 1,
+  "restart_delay" : 20,
+  "O2_sensor_calibration": {
+    "input_max": 20,
+    "output_max" : 25,
+    "current_3": 6.088,
+    "percent_3": 20.95,
+    "current_2": 3.72,
+    "percent_2": 10.475,
+    "current_1": 1.536,
+    "percent_1": 0
+  },
+  "press_sensor_cal":
+  {
+  "slope" : 38.4,
+  "y_intercept" : -22.9
+  },
+  "flow_sensor_cal":
+  {
+  "slope" : -100,
+  "y_intercept" : -400
+  },
+  "flow_temp_sensor_cal":
+  {
+  "slope" : 100,
+  "y_intercept" : 300
+  },
+  "o2_sensor_enabled": false,
+  "controller_enabled": false
+}
