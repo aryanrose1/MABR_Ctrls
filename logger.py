@@ -183,4 +183,4 @@ while True:
         "Temperature": float(log_buffer[temp_idx]) if log_buffer[temp_idx] != "-" else 0.0
     }
     write_sensor_data(sensor_data)
-    time.sleep(5)
+    time.sleep(5) # The number inside the parentheses determine the amount of seconds in which data is sent to sensor_data.json
