@@ -5,8 +5,9 @@ This project involves automating and monitoring a **wastewater treatment system*
 
 ## Project Structure
 ### **Python Scripts**
+- `logger.py` - Sensor Monitoring & Data Logging to JSON
+- `opc_server.py` - OPC UA Server & Data Sharing to inCTRL opsCTRL Edge
 - `sonde.py` - Sonde Sensor Communication
-- `logger.py` - Sensor Monitoring & OPC UA Integration
 - `modbus.py` - Modbus Sensor Data Retrieval & Calibration
 
 ### **Shell Scripts**
@@ -19,6 +20,9 @@ This project involves automating and monitoring a **wastewater treatment system*
 - `debug.log` - Log file for debugging
 - `.python-version` - Python version specification
 
+### **Data Storage Files**
+- `sensor_data.json` - JSON file storing real-time sensor data
+
 ### **Hardware Design Files**
 - `backplane_rev_2.brd` - Circuit board design
 - `backplane_rev_2.sch` - Schematic design
@@ -26,63 +30,73 @@ This project involves automating and monitoring a **wastewater treatment system*
 ---
 
 ## **Script Descriptions**
-### **1. `sonde.py` - Sonde Sensor Communication**
+### **1. `logger.py` - Sensor Monitoring & Data Logging**
+- Continuously **retrieves real-time sensor data** from connected devices.
+- Writes sensor readings to **`sensor_data.json`** for external use.
+- Acts as the primary data source for **OPC UA and opsCTRL Edge integration**.
+
+#### **Relevance:**
+Ensures accurate logging of wastewater parameters and provides data for external systems.
+
+---
+
+### **2. `opc_server.py` - OPC UA Server & Data Sharing to inCTRL opsCTRL Edge**
+- Reads sensor data from **`sensor_data.json`**.
+- Updates the **OPC UA Server** to allow real-time data access.
+- Sends sensor readings to **inCTRL’s opsCTRL Edge** for remote monitoring and analysis.
+- Handles **error logging** for connectivity issues.
+
+#### **Relevance:**
+Provides a standardized data-sharing mechanism for industrial automation and process control.
+
+---
+
+### **3. `sensor_data.json` - Real-time Sensor Data Storage**
+- A **lightweight JSON file** that stores real-time wastewater treatment data.
+- Continuously updated by **`logger.py`**.
+- Read by **`opc_server.py`** to share data via **OPC UA and opsCTRL Edge**.
+
+#### **Relevance:**
+Acts as a data bridge between sensor monitoring and external integration systems.
+
+---
+
+### **4. `sonde.py` - Sonde Sensor Communication**
 - Establishes a **serial connection** with a **sonde sensor** (water quality monitoring device).
 - Retrieves **real-time water quality parameters** (e.g., pH, ammonia, nitrate levels).
-#### **Functions:**
-- Initializes communication via a specified serial port.
-- Checks if the sensor is connected.
-- Reads and retrieves sensor data.
-- Detects disconnections and attempts to reconnect.
+
 #### **Relevance:**
 Ensures continuous monitoring of water quality in the treatment process.
 
 ---
 
-### **2. `logger.py` - Sensor Monitoring & OPC UA Integration**
-This is the **core script** that:
-- **Collects data** from multiple sensors (e.g., Sonde, Oxygen sensor).
-- **Logs real-time water quality parameters**.
-- **Provides a GUI interface** for monitoring.
-- **Shares data through an OPC UA server**, allowing integration with SCADA systems.
-
-#### **Includes:**
-- **Sonde class:** Reads water quality data.
-- **Oxygen sensor class:** Uses Modbus to retrieve dissolved oxygen levels.
-- **Data mapping:** Converts raw sensor values into calibrated percentages.
-- **Multi-threading:** Runs background processes to update sensor data continuously.
-#### **Relevance:**
-Essential for real-time monitoring, logging, and external system communication.
-
----
-
-### **3. `modbus.py` - Modbus Sensor Data Retrieval & Calibration**
+### **5. `modbus.py` - Modbus Sensor Data Retrieval & Calibration**
 - Handles **Modbus RTU communication** for sensors using a serial port.
 - Reads raw sensor data from **Modbus registers** and applies calibration to obtain meaningful values.
-#### **Calibration Mapping:**
-- Converts raw electrical signals (mA) to **real-world units** (e.g., oxygen levels).
-- Uses predefined **calibration points** to ensure accuracy.
+
 #### **Relevance:**
 Ensures precise data collection from Modbus-based sensors used in wastewater treatment.
 
 ---
 
-### **4. `run2.sh` - Logger Script Automation**
+### **6. `run2.sh` - Logger Script Automation**
 - Detects and assigns **correct serial ports** for sensors.
 - Runs the **logger script** (`logger.py`) with detected ports.
 - Prints the **assigned ports for debugging**.
+
 #### **Relevance:**
 Automates the startup process for continuous monitoring.
 
 ---
 
-### **5. `get_port.sh` - USB Device Identification**
+### **7. `get_port.sh` - USB Device Identification**
 - Scans all **connected USB devices** and extracts their system paths.
 - Identifies:
   - **Sonde sensor**
   - **Oxygen sensor**
   - **Arduino board** (if used for control)
 - Outputs detected devices for use in `run2.sh`.
+
 #### **Relevance:**
 Ensures proper device identification before launching monitoring scripts.
 
@@ -92,7 +106,7 @@ Ensures proper device identification before launching monitoring scripts.
 This set of scripts forms an **automated sensor monitoring system** for a wastewater treatment facility, ensuring:
 - **Continuous water quality monitoring.**
 - **Automated sensor communication & calibration.**
-- **Integration with SCADA systems via OPC UA.**
+- **Integration with SCADA systems via OPC UA and inCTRL opsCTRL Edge.**
 - **Efficient startup & debugging with automated scripts.**
 
 ---
@@ -108,7 +122,7 @@ A **GUI (Graphical User Interface)** is a visual way for users to interact with 
 
 ### **What is an OPC UA Server?**
 An **OPC UA (Open Platform Communications Unified Architecture) server** is a **machine-to-machine communication protocol** designed for **industrial automation and process control**. It is used to securely exchange **real-time data** between **devices, sensors, and control systems**.
-- The **OPC UA server** in `logger.py` gathers **real-time sensor data** (e.g., pH, ORP, NH₄, NO₃, ODO, temperature, etc.).
+- The **OPC UA server** in `opc_server.py` gathers **real-time sensor data** (e.g., pH, ORP, NH₄, NO₃, ODO, temperature, etc.).
 - Other software applications (**SCADA systems, HMIs, or data loggers**) can connect to the **OPC UA server** to access this data in real-time.
 - It allows **remote monitoring and control** of the wastewater treatment process without directly connecting to the sensors.
 
@@ -118,12 +132,10 @@ An **OPC UA (Open Platform Communications Unified Architecture) server** is a **
 
 ---
 
-### **What is Modbus RTU?**
-**Modbus RTU (Remote Terminal Unit)** is a widely used **serial communication protocol** in industrial automation. It allows a computer (or PLC) to communicate with **sensors, actuators, and other field devices** over a serial connection (e.g., RS-232, RS-485).
-- The `modbus.py` script **connects to a sensor** (e.g., dissolved oxygen meter) using **Modbus RTU over a serial port**.
-- It **reads raw sensor values** from specific **Modbus registers**.
-- It **converts those values** into meaningful percentages (e.g., oxygen concentration).
-- This data is then used for **real-time monitoring and logging**.
+### **What is inCTRL opsCTRL Edge?**
+**inCTRL opsCTRL Edge** is an industrial automation platform for **monitoring, analyzing, and optimizing process data**. 
+- The `opc_server.py` script sends **real-time sensor data** to **opsCTRL Edge** using **HTTP requests**.
+- This enables **remote monitoring** and **data-driven optimization** of wastewater treatment operations.
 
 ---
 
@@ -134,4 +146,3 @@ This project is open-source and can be modified or extended to fit various waste
 
 ### **Contact**
 For questions or contributions, feel free to submit an issue or pull request on GitHub.
-
