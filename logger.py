@@ -1,11 +1,11 @@
 # =============================================================
-# SENSOR MONITORING & CONTROL SYSTEM WITH GUI AND OPC UA SERVER
+# SENSOR MONITORING & CONTROL SYSTEM WITH GUI
 # -------------------------------------------------------------
 # This script handles:
 # 1. **Communication with multiple sensors** using Modbus RTU and Serial protocols.
 # 2. **Graphical User Interface (GUI)** to display real-time sensor data.
-# 3. **OPC UA Server Integration** to share data with other applications.
-# 4. **Background threads** for continuous sensor monitoring and data acquisition.
+# 3. **Background threads** for continuous sensor monitoring and data acquisition.
+# 4. **Writes real-time sensor data to JSON for external use.**
 #
 # This system is designed for **real-time monitoring of water quality** in a
 # wastewater treatment plant or similar industrial setup.
@@ -23,13 +23,22 @@ import json  # Configuration file handling
 import argparse  # Command-line argument parsing
 import traceback  # Error handling and debugging
 import threading  # Background threads for continuous sensor data updates
-from opcua import ua, Server  # OPC UA server for real-time data access
+
+# --------------------------
+# Sensor Data File
+# --------------------------
+SENSOR_DATA_FILE = "sensor_data.json"
+
+def write_sensor_data(data):
+    """Writes sensor data to a JSON file for external use."""
+    with open(SENSOR_DATA_FILE, "w") as file:
+        json.dump(data, file)
 
 # --------------------------
 # Sensor Data Buffer
 # --------------------------
 # Stores real-time readings from different sensors
-log_buffer = ["-", "-", "-", "-", "-", "-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"]
+log_buffer = ["-", "-", "-", "-", "-", "-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"]
 
 # Index positions for specific parameters in the log buffer
 pH_idx = 1
@@ -52,7 +61,6 @@ scale_size = 18  # Font scaling for GUI
 # --------------------------
 # Command-line Arguments
 # --------------------------
-# Allows users to specify ports for different devices via command-line options
 parser = argparse.ArgumentParser()
 parser.add_argument("--controller_port", help="Controller port", default=None)
 parser.add_argument("--O2_port", help="Oxygen sensor port", default=None)
@@ -63,31 +71,27 @@ args = parser.parse_args()
 # Configuration File Handling
 # --------------------------
 def read_config_file(file_path):
-    """Reads and loads the configuration settings from a JSON file."""
     with open(file_path, 'r') as file:
         return json.load(file)
 
 def write_config_file(file_path, config):
-    """Writes updated configuration settings back to a JSON file."""
     with open(file_path, 'w') as file:
         json.dump(config, file, indent=2)
 
-config_file_path = 'config.json'  # Path to the configuration file
-config = read_config_file(config_file_path)  # Load configuration
+config_file_path = 'config.json'
+config = read_config_file(config_file_path)
 
 # --------------------------
 # Function for Mapping Sensor Values
 # --------------------------
 def map_value(value, input_min, input_max, output_min, output_max):
-    """Maps raw sensor readings to a scaled percentage using linear interpolation."""
-    return output_min + (value - input_min) * (output_max - output_min) / (input_max - input_min)
+    return output_min + (value - input_min) * (output_max - input_min) / (input_max - input_min)
 
 # --------------------------
 # Sensor Classes
 # --------------------------
 
 class Sonde:
-    """Handles communication with the sonde sensor via serial connection."""
     def __init__(self, port):
         self.port = port
         self.disconnected = True
@@ -105,7 +109,6 @@ class Sonde:
         return self.serial_data
     
     def read_from_port(self):
-        """Continuously reads data from the sonde sensor in a background thread."""
         while not self.disconnected:
             try:
                 if self.serial_port.in_waiting > 0:
@@ -117,7 +120,6 @@ class Sonde:
                 self.disconnected = True
 
 class O2_sensor:
-    """Handles communication with the oxygen sensor using Modbus RTU."""
     def __init__(self, port):
         self.calibration = config['O2_sensor_calibration']
         self.port = port
@@ -144,20 +146,16 @@ class O2_sensor:
         return self.oxygen_value
     
     def loop(self):
-        """Continuously reads data from the oxygen sensor."""
         while True:
             self.get_data()
     
     def get_data(self):
-        """Reads and processes oxygen sensor data using Modbus communication."""
         try:
             self.client.connect()
             slave_address = 5
             register_address = 7
             number_of_registers = 1
-
             response = self.client.read_input_registers(register_address, number_of_registers, unit=slave_address)
-            
             if response.isError():
                 print(f"Error in reading register: {response}")
                 self.oxygen_value = "ERR"
@@ -165,10 +163,7 @@ class O2_sensor:
                 measuring_value_channel_1 = response.registers[0] * 0.001
                 global o2_mA
                 o2_mA = measuring_value_channel_1
-                
-                # Apply calibration mapping
                 mapped_value = map_value(measuring_value_channel_1, self.calibration['current_1'], self.calibration['current_3'], self.calibration['percent_1'], self.calibration['percent_3'])
-                
                 self.oxygen_value = f"{mapped_value:.2f}"
             self.client.close()
         except:
@@ -177,7 +172,15 @@ class O2_sensor:
             self.client.close()
             self.oxygen_value = "ERR"
 
-# Additional classes exist for Controller, GUI, and OPC UA Server integration...
-# This script continues with real-time monitoring, logging, and control functionalities.
-
-# More details and further updates can be implemented as required.
+# JSON data writing loop
+while True:
+    sensor_data = {
+        "pH": float(log_buffer[pH_idx]) if log_buffer[pH_idx] != "-" else 0.0,
+        "ORP": float(log_buffer[orp_idx]) if log_buffer[orp_idx] != "-" else 0.0,
+        "NH4": float(log_buffer[NH4_idx]) if log_buffer[NH4_idx] != "-" else 0.0,
+        "NO3": float(log_buffer[NO3_idx]) if log_buffer[NO3_idx] != "-" else 0.0,
+        "ODO": float(log_buffer[ODO_idx]) if log_buffer[ODO_idx] != "-" else 0.0,
+        "Temperature": float(log_buffer[temp_idx]) if log_buffer[temp_idx] != "-" else 0.0
+    }
+    write_sensor_data(sensor_data)
+    time.sleep(5)
