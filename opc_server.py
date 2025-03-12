@@ -4,18 +4,24 @@ import sqlite3
 import json
 import threading
 import pandas as pd
+import datetime
+import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
 # Database file
 DB_FILE = "sensor_data.db"
 CONFIG_FILE = "config.json"
+DROPBOX_PATH = "/home/cee/Dropbox/MABR_data/"
+
+# Load configuration
 
 def load_config():
     """Loads configuration settings from config.json."""
     with open(CONFIG_FILE, "r") as file:
         return json.load(file)
 
+# Read sensor data from SQLite
 def read_sensor_data():
     """Reads sensor data from SQLite."""
     conn = sqlite3.connect(DB_FILE)
@@ -24,6 +30,31 @@ def read_sensor_data():
     data = {tag: value for tag, value in cursor.fetchall()}
     conn.close()
     return data if data else {"pH": 0.0, "ORP": 0.0, "NH4": 0.0, "NO3": 0.0, "ODO": 0.0, "Temperature": 0.0}
+
+# Export daily CSV to Dropbox
+def export_daily_csv():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    
+    # Get yesterday's date
+    today = datetime.date.today()
+    yesterday = today - datetime.timedelta(days=1)
+    start_time = f"{yesterday} 00:00:00"
+    end_time = f"{yesterday} 23:59:59"
+
+    # Query last 24 hours of data
+    query = f"""
+    SELECT * FROM sensor_data
+    WHERE timestamp BETWEEN '{start_time}' AND '{end_time}'
+    """
+    
+    df = pd.read_sql_query(query, conn)
+    conn.close()
+
+    # Generate CSV filename
+    csv_filename = f"{DROPBOX_PATH}sensor_data_{yesterday}.csv"
+    df.to_csv(csv_filename, index=False)
+    print(f"Exported daily CSV to {csv_filename}")
 
 # Initialize OPC UA Server
 server = Server()
@@ -35,7 +66,7 @@ idx = server.register_namespace(uri)
 # Create an object to store sensor data
 mabr_object = server.nodes.objects.add_object(idx, "MABR_Sensors")
 
-# Connect to SQLite and load existing tags
+# Load existing tags
 def load_tags():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -100,7 +131,13 @@ try:
         for key, value in updated_values.items():
             if key in sensor_data:
                 sensor_data[key].set_value(value)
-        time.sleep(5)
+        
+        # Run daily CSV export at midnight
+        current_time = datetime.datetime.now()
+        if current_time.hour == 0 and current_time.minute == 0:
+            export_daily_csv()
+        
+        time.sleep(60)  # Check every minute
 
 except KeyboardInterrupt:
     print("Shutting down OPC UA Server...")
