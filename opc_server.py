@@ -8,14 +8,21 @@ import datetime
 import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
+from opcua.common.cert_gen import generate_self_signed_certificate
+from opcua import ua
 
 # Database file
 DB_FILE = "sensor_data.db"
 CONFIG_FILE = "config.json"
 DROPBOX_PATH = "/home/cee/Dropbox/MABR_data/"
 
-# Load configuration
+# Generate OPC UA Certificate & Private Key if not already generated
+CERT_FILE = "server_cert.pem"
+KEY_FILE = "server_key.pem"
+if not os.path.exists(CERT_FILE) or not os.path.exists(KEY_FILE):
+    generate_self_signed_certificate(CERT_FILE, KEY_FILE, "My_OPCUA_Server")
 
+# Load configuration
 def load_config():
     """Loads configuration settings from config.json."""
     with open(CONFIG_FILE, "r") as file:
@@ -60,6 +67,13 @@ def export_daily_csv():
 server = Server()
 server.set_endpoint("opc.tcp://0.0.0.0:4840/mabr_server/")  # Set the server URL
 server.set_server_name("MABR_OPC_UA_Server")
+server.load_certificate(CERT_FILE)
+server.load_private_key(KEY_FILE)
+server.set_security_policy([
+    ua.SecurityPolicyType.Basic256Sha256_SignAndEncrypt,
+    ua.SecurityPolicyType.NoSecurity  # Allow unsecured connections for testing
+])
+
 uri = "http://mabr.system"
 idx = server.register_namespace(uri)
 
