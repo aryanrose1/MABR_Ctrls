@@ -1,12 +1,14 @@
 # MABR Control System - Automated Wastewater Monitoring
 
 ## Overview
-This project involves automating and monitoring a **wastewater treatment system** by integrating **sensors, a data logger, and an industrial communication protocol (Modbus RTU)**. The system is designed to monitor and control a **Membrane Aerated Biofilm Reactor (MABR)** by handling **sensor data acquisition, logging, and communication** using serial and Modbus protocols.
+This project involves automating and monitoring a **wastewater treatment system** by integrating **sensors, a data logger, and an industrial communication protocol (Modbus RTU)**. The system is designed to monitor and control a **Membrane Aerated Biofilm Reactor (MABR)** by handling **sensor data acquisition, logging, and communication** using serial and Modbus protocols. 
+
+This implementation now utilizes **SQLite** for structured data storage, **OPC UA with secure certificates** for external system integration, and **automated daily CSV exports** for data tracking.
 
 ## Project Structure
 ### **Python Scripts**
-- `logger.py` - Sensor Monitoring & Data Logging to JSON
-- `opc_server.py` - OPC UA Server & Data Sharing to inCTRL opsCTRL Edge
+- `logger.py` - Sensor Monitoring & Data Logging to SQLite
+- `opc_server.py` - OPC UA Server & Data Sharing to ifakFAST & Dropbox CSV Export
 - `sonde.py` - Sonde Sensor Communication
 - `modbus.py` - Modbus Sensor Data Retrieval & Calibration
 
@@ -21,7 +23,9 @@ This project involves automating and monitoring a **wastewater treatment system*
 - `.python-version` - Python version specification
 
 ### **Data Storage Files**
-- `sensor_data.json` - JSON file storing real-time sensor data
+- `sensor_data.db` - SQLite database storing real-time sensor data
+- `sensor_database.sql` - SQL script for database initialization
+- Automated daily CSV files stored in **Dropbox**
 
 ### **Hardware Design Files**
 - `backplane_rev_2.brd` - Circuit board design
@@ -32,36 +36,47 @@ This project involves automating and monitoring a **wastewater treatment system*
 ## **Script Descriptions**
 ### **1. `logger.py` - Sensor Monitoring & Data Logging**
 - Continuously **retrieves real-time sensor data** from connected devices.
-- Writes sensor readings to **`sensor_data.json`** for external use.
-- Acts as the primary data source for **OPC UA and opsCTRL Edge integration**.
+- Stores sensor readings in **`sensor_data.db`** for structured data management.
+- Serves as the primary data source for **OPC UA and external system integrations**.
 
 #### **Relevance:**
-Ensures accurate logging of wastewater parameters and provides data for external systems.
+Ensures accurate logging of wastewater parameters and provides structured, queryable data storage.
 
 ---
 
-### **2. `opc_server.py` - OPC UA Server & Data Sharing to inCTRL opsCTRL Edge**
-- Reads sensor data from **`sensor_data.json`**.
-- Updates the **OPC UA Server** to allow real-time data access.
-- Sends sensor readings to **inCTRL’s opsCTRL Edge** for remote monitoring and analysis.
-- Handles **error logging** for connectivity issues.
+### **2. `opc_server.py` - OPC UA Server & Data Sharing to ifakFAST and Dropbox**
+- Reads sensor data from **`sensor_data.db`**.
+- Updates the **OPC UA Server** to allow real-time secure data access.
+- Utilizes **self-signed certificates** for secure OPC UA communication.
+- Exports daily CSV logs to **Dropbox** at midnight.
+- Supports dynamic **tag management via GUI or Excel import**.
 
 #### **Relevance:**
-Provides a standardized data-sharing mechanism for industrial automation and process control.
+Provides a standardized and secure data-sharing mechanism for industrial automation and process control, while also generating historical records via CSV exports.
 
 ---
 
-### **3. `sensor_data.json` - Real-time Sensor Data Storage**
-- A **lightweight JSON file** that stores real-time wastewater treatment data.
+### **3. `sensor_data.db` - Real-time Sensor Data Storage**
+- A **SQLite database** that stores timestamped wastewater treatment data.
 - Continuously updated by **`logger.py`**.
-- Read by **`opc_server.py`** to share data via **OPC UA and opsCTRL Edge**.
+- Read by **`opc_server.py`** to share data via **OPC UA and CSV exports**.
 
 #### **Relevance:**
-Acts as a data bridge between sensor monitoring and external integration systems.
+Acts as a structured data bridge between sensor monitoring and external integration systems, ensuring long-term storage and reliability.
 
 ---
 
-### **4. `sonde.py` - Sonde Sensor Communication**
+### **4. `sensor_database.sql` - Database Initialization Script**
+- Creates the **`sensor_data.db`** structure.
+- Defines tables for **sensor data logging and OPC UA tags**.
+- Ensures proper indexing and query efficiency.
+
+#### **Relevance:**
+This must be run **once** before starting the system to set up the database structure.
+
+---
+
+### **5. `sonde.py` - Sonde Sensor Communication**
 - Establishes a **serial connection** with a **sonde sensor** (water quality monitoring device).
 - Retrieves **real-time water quality parameters** (e.g., pH, ammonia, nitrate levels).
 
@@ -70,7 +85,7 @@ Ensures continuous monitoring of water quality in the treatment process.
 
 ---
 
-### **5. `modbus.py` - Modbus Sensor Data Retrieval & Calibration**
+### **6. `modbus.py` - Modbus Sensor Data Retrieval & Calibration**
 - Handles **Modbus RTU communication** for sensors using a serial port.
 - Reads raw sensor data from **Modbus registers** and applies calibration to obtain meaningful values.
 
@@ -79,7 +94,7 @@ Ensures precise data collection from Modbus-based sensors used in wastewater tre
 
 ---
 
-### **6. `run2.sh` - Logger Script Automation**
+### **7. `run2.sh` - Logger Script Automation**
 - Detects and assigns **correct serial ports** for sensors.
 - Runs the **logger script** (`logger.py`) with detected ports.
 - Prints the **assigned ports for debugging**.
@@ -89,7 +104,7 @@ Automates the startup process for continuous monitoring.
 
 ---
 
-### **7. `get_port.sh` - USB Device Identification**
+### **8. `get_port.sh` - USB Device Identification**
 - Scans all **connected USB devices** and extracts their system paths.
 - Identifies:
   - **Sonde sensor**
@@ -103,39 +118,27 @@ Ensures proper device identification before launching monitoring scripts.
 ---
 
 ## **Conclusion**
-This set of scripts forms an **automated sensor monitoring system** for a wastewater treatment facility, ensuring:
+This set of scripts forms an **automated, secure sensor monitoring system** for a wastewater treatment facility, ensuring:
 - **Continuous water quality monitoring.**
 - **Automated sensor communication & calibration.**
-- **Integration with SCADA systems via OPC UA and inCTRL opsCTRL Edge.**
+- **Secure integration with SCADA systems via OPC UA with certificates.**
+- **Daily historical logging with automatic CSV exports to Dropbox.**
 - **Efficient startup & debugging with automated scripts.**
 
 ---
 
-## **Additional Concepts**
-### **What is a GUI?**
-A **GUI (Graphical User Interface)** is a visual way for users to interact with software applications. Instead of using command-line inputs, a GUI provides **buttons, text fields, graphs, and other interactive elements** to make software more user-friendly.
-- The `sonde.py` script implements a GUI using **Tkinter** (Python’s built-in GUI library).
-- It provides **real-time sensor data** (e.g., pH, dissolved oxygen, temperature) in a **clear, structured format**.
-- Users can **view and analyze sensor readings** without needing to interact with raw serial data.
+## **Security & Data Access**
+### **🔒 OPC UA Secure Access**
+- The system **uses security certificates** for trusted communication.
+- **Certificates must be added to ifakFAST’s trusted folder** for access.
+- Only authorized systems can pull real-time data.
 
 ---
 
-### **What is an OPC UA Server?**
-An **OPC UA (Open Platform Communications Unified Architecture) server** is a **machine-to-machine communication protocol** designed for **industrial automation and process control**. It is used to securely exchange **real-time data** between **devices, sensors, and control systems**.
-- The **OPC UA server** in `opc_server.py` gathers **real-time sensor data** (e.g., pH, ORP, NH₄, NO₃, ODO, temperature, etc.).
-- Other software applications (**SCADA systems, HMIs, or data loggers**) can connect to the **OPC UA server** to access this data in real-time.
-- It allows **remote monitoring and control** of the wastewater treatment process without directly connecting to the sensors.
-
-#### **Think of an OPC UA server as a translator and messenger:**
-- **Translator:** It collects raw data from sensors and organizes it in a structured format.
-- **Messenger:** It allows different clients (dashboards, control systems, data loggers) to request or receive updates from the sensors.
-
----
-
-### **What is inCTRL opsCTRL Edge?**
-**inCTRL opsCTRL Edge** is an industrial automation platform for **monitoring, analyzing, and optimizing process data**. 
-- The `opc_server.py` script sends **real-time sensor data** to **opsCTRL Edge** using **HTTP requests**.
-- This enables **remote monitoring** and **data-driven optimization** of wastewater treatment operations.
+### **💾 Historical Data Storage & Access**
+- **All sensor data is stored in `sensor_data.db`** for long-term analysis.
+- **Automated daily CSV exports** provide external data tracking via Dropbox.
+- **Query past sensor readings via SQLite.**
 
 ---
 
