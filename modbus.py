@@ -41,7 +41,7 @@ def map_value(value, input_min, input_max, output_min, output_max):
 # This section configures the connection to the Modbus RTU device.
 client = ModbusSerialClient(
     method="rtu",  # Modbus RTU mode
-    port="COM8",  # Serial port (update based on your hardware setup)
+    port=sys.argv[1],  # Serial port (update based on your hardware setup)
     baudrate=9600,  # Communication speed in bits per second
     bytesize=8,  # Data byte size
     parity="N",  # No parity bit
