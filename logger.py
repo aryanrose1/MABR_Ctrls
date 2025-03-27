@@ -67,7 +67,7 @@ class Sonde:
 class O2Sensor:
     def __init__(self, port):
         self.port = port
-        self.client = ModbusSerialClient(method="rtu", port=port, baudrate=9600, timeout=1)
+        self.client = ModbusSerialClient(method="rtu", port=args.02_port, baudrate=9600, timeout=1)
         self.reader_thread = threading.Thread(target=self.read_from_modbus, daemon=True)
         self.reader_thread.start()
     
@@ -84,8 +84,8 @@ class O2Sensor:
 # --------------------------
 # Initialize Sensors
 # --------------------------
-sonde = Sonde("COM3")  # Replace with actual port
-oxygen_sensor = O2Sensor("COM4")  # Replace with actual port
+sonde = Sonde(args.sonde_port)  # Replace with actual port
+oxygen_sensor = O2Sensor(args.02_port)  # Replace with actual port
 
 # --------------------------
 # Initialize Database and Start Sensor Logging
