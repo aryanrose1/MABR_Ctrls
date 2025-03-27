@@ -74,7 +74,7 @@ server.set_security_policy([
     ua.SecurityPolicyType.NoSecurity  # Allow unsecured connections for testing
 ])
 
-uri = "http://mabr.system"
+uri = "urn:mabr:system"
 idx = server.register_namespace(uri)
 
 # Create an object to store sensor data
